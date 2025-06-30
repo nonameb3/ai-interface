@@ -2,53 +2,47 @@ import { openai } from '@ai-sdk/openai';
 import { streamText } from 'ai';
 import { NextRequest } from 'next/server';
 import { Pinecone } from '@pinecone-database/pinecone';
+import { OpenAIEmbeddings } from '@langchain/openai';
+import { PromptTemplate } from '@langchain/core/prompts';
 
-// Initialize Pinecone
+// Initialize LangChain components
+const embeddings = new OpenAIEmbeddings({
+  openAIApiKey: process.env.OPENAI_API_KEY!,
+  modelName: process.env.EMBEDDING_MODEL || 'text-embedding-3-small',
+});
+
 const pinecone = new Pinecone({
   apiKey: process.env.PINECONE_API_KEY!,
 });
 
-// Get the index
-const getIndex = async () => {
-  try {
-    return pinecone.index(process.env.PINECONE_INDEX_NAME!);
-  } catch (error) {
-    console.error('Error getting Pinecone index:', error);
-    throw error;
-  }
-};
+// LangChain optimized RAG prompt template
+const ragPromptTemplate = PromptTemplate.fromTemplate(`
+You are a helpful AI assistant for a portfolio website. Use the following context from the knowledge base to answer questions about the person's experience, skills, and projects.
 
-// Generate embeddings for query
-async function generateEmbedding(text: string) {
-  try {
-    const response = await fetch('https://api.openai.com/v1/embeddings', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: process.env.EMBEDDING_MODEL || 'text-embedding-3-small',
-        input: text,
-      }),
-    });
+Context from knowledge base:
+{context}
 
-    const data = await response.json();
-    return data.data[0].embedding;
-  } catch (error) {
-    console.error('Error generating embedding:', error);
-    throw error;
-  }
-}
+Instructions:
+- Use the provided context to give accurate, detailed responses
+- If the context doesn't contain relevant information, politely indicate that you don't have that specific information
+- Be conversational and helpful
+- Focus on the person's professional background, skills, and projects
+- If no context is available, provide a general helpful response
 
-// Retrieve relevant context from Pinecone
+Question: {question}
+
+Answer:`);
+
+// LangChain optimized context retrieval
 async function retrieveContext(query: string, topK: number = 3) {
   try {
-    const index = await getIndex();
-    const embedding = await generateEmbedding(query);
+    const index = pinecone.index(process.env.PINECONE_INDEX_NAME!);
+    
+    // Use LangChain's optimized embedding generation
+    const queryEmbedding = await embeddings.embedQuery(query);
     
     const queryResponse = await index.query({
-      vector: embedding,
+      vector: queryEmbedding,
       topK,
       includeMetadata: true,
     });
@@ -78,28 +72,19 @@ export async function POST(req: NextRequest) {
       return new Response('No user message found', { status: 400 });
     }
 
-    // Retrieve relevant context using RAG
+    // Retrieve relevant context using LangChain optimized RAG
     const contexts = await retrieveContext(latestMessage.content);
     
-    // Build context string
+    // Build context string with scores for better quality
     const contextString = contexts.length > 0 
-      ? contexts.map(ctx => `Source: ${ctx.source}\nContent: ${ctx.content}`).join('\n\n')
+      ? contexts.map((ctx, i) => `[${i + 1}] (Relevance: ${(ctx.score * 100).toFixed(1)}%) ${ctx.content}`).join('\n\n')
       : 'No relevant context found in knowledge base.';
 
-    // Create system prompt with context
-    const systemPrompt = `You are a helpful AI assistant for a portfolio website. Use the following context from the knowledge base to answer questions about the person's experience, skills, and projects.
-
-Context from knowledge base:
-${contextString}
-
-Instructions:
-- Use the provided context to give accurate, detailed responses
-- If the context doesn't contain relevant information, politely indicate that you don't have that specific information
-- Be conversational and helpful
-- Focus on the person's professional background, skills, and projects
-- If no context is available, provide a general helpful response
-
-Answer the user's question based on the context above.`;
+    // Use LangChain's optimized prompt template
+    const systemPrompt = await ragPromptTemplate.format({
+      context: contextString,
+      question: latestMessage.content
+    });
 
     // Prepare messages with system prompt
     const messagesWithContext = [

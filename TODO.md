@@ -2,7 +2,7 @@
 
 ## ✅ COMPLETED - High Priority (Core Infrastructure)
 - [x] Design RAG architecture and choose tech stack
-- [x] Install required dependencies (ai, pinecone, langchain, openai)
+- [x] Install required dependencies (ai, pinecone, openai)
 - [x] Set up environment variables and API keys
 - [x] Create API route for chat (/api/chat)
 - [x] Create API route for documents (/api/documents)
@@ -28,12 +28,12 @@
 - **LLM**: OpenAI GPT-4 (via Vercel AI SDK)
 - **Vector DB**: Pinecone (managed, scalable)
 - **Embeddings**: OpenAI text-embedding-3-small
-- **Document Processing**: LangChain + pdf-parse
+- **Document Processing**: LangChain RecursiveCharacterTextSplitter + pdf-parse
 - **Framework**: Next.js 15 API routes
 
 ## Required Dependencies
 ```bash
-pnpm add ai openai @pinecone-database/pinecone langchain @langchain/openai pdf-parse
+pnpm add ai openai @pinecone-database/pinecone langchain @langchain/openai @langchain/core pdf-parse
 pnpm add -D @types/pdf-parse
 ```
 
@@ -74,11 +74,11 @@ Knowledge Base
 ## 🎉 PROJECT COMPLETED!
 
 ### What We Built
-- **Full RAG System**: Complete retrieval-augmented generation pipeline
+- **Full RAG System**: Complete retrieval-augmented generation pipeline with LangChain optimizations
 - **Vector Database**: Pinecone index for semantic search
-- **Document Processing**: Support for PDF, TXT, and MD files
-- **Streaming Chat**: Real-time AI responses with knowledge base context
-- **Clean Architecture**: Modular, maintainable codebase
+- **Document Processing**: Support for PDF, TXT, and MD files using LangChain's RecursiveCharacterTextSplitter
+- **Streaming Chat**: Real-time AI responses with knowledge base context and optimized prompts
+- **Clean Architecture**: Modular, maintainable codebase with LLM best practices
 
 ### Key Files Created
 - `src/app/api/chat/route.ts` - RAG-powered chat API

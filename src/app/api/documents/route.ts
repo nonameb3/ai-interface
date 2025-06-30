@@ -1,53 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Pinecone } from '@pinecone-database/pinecone';
+import { RecursiveCharacterTextSplitter } from 'langchain/text_splitter';
+import { OpenAIEmbeddings } from '@langchain/openai';
 
 
-// Generate embeddings
-async function generateEmbedding(text: string) {
-  const response = await fetch('https://api.openai.com/v1/embeddings', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: process.env.EMBEDDING_MODEL || 'text-embedding-3-small',
-      input: text,
-    }),
-  });
+// Initialize LangChain components
+const embeddings = new OpenAIEmbeddings({
+  openAIApiKey: process.env.OPENAI_API_KEY!,
+  modelName: process.env.EMBEDDING_MODEL || 'text-embedding-3-small',
+});
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Embedding API error: ${response.status} ${errorText}`);
-  }
-
-  const data = await response.json();
-  
-  if (!data.data || !data.data[0] || !data.data[0].embedding) {
-    throw new Error('Invalid embedding response structure');
-  }
-
-  return data.data[0].embedding;
-}
-
-// Simple text chunking
-function chunkText(text: string, chunkSize: number = 1000, overlap: number = 200): string[] {
-  const chunks = [];
-  let start = 0;
-  
-  while (start < text.length) {
-    const end = Math.min(start + chunkSize, text.length);
-    chunks.push(text.slice(start, end));
-    
-    // Move to next chunk position
-    start = start + chunkSize - overlap;
-    
-    // If the next chunk would be entirely overlap, stop
-    if (start >= text.length) break;
-  }
-  
-  return chunks;
-}
+const textSplitter = new RecursiveCharacterTextSplitter({
+  chunkSize: 1000,
+  chunkOverlap: 200,
+  separators: ['\n\n', '\n', ' ', ''],
+});
 
 // POST - Upload and process document
 export async function POST(req: NextRequest) {
@@ -93,9 +60,15 @@ export async function POST(req: NextRequest) {
 
     console.log(`📝 Extracted text: ${text.length} characters`);
 
-    // Split text into chunks
-    const chunks = chunkText(text);
-    console.log(`✂️ Created ${chunks.length} chunks`);
+    // Use LangChain's optimized text splitter
+    const documents = await textSplitter.createDocuments([text], [{ 
+      source, 
+      fileName: file.name,
+      fileType: file.type,
+      uploadedAt: new Date().toISOString()
+    }]);
+    
+    console.log(`✂️ Created ${documents.length} optimized chunks with LangChain`);
 
     // Initialize Pinecone inside the function
     const pinecone = new Pinecone({
@@ -104,31 +77,26 @@ export async function POST(req: NextRequest) {
     
     const index = pinecone.index(process.env.PINECONE_INDEX_NAME!);
 
-    // Process chunks
-    const vectors = [];
-    for (let i = 0; i < chunks.length; i++) {
-      console.log(`🔄 Processing chunk ${i + 1}/${chunks.length}`);
-      
-      const embedding = await generateEmbedding(chunks[i]);
-      
-      vectors.push({
-        id: `${source}-${Date.now()}-${i}`,
-        values: embedding,
-        metadata: {
-          content: chunks[i],
-          source: source,
-          fileName: file.name,
-          fileType: file.type,
-          chunkIndex: i,
-          uploadedAt: new Date().toISOString(),
-        }
-      });
-      
-      // Small delay to avoid rate limiting
-      if (i < chunks.length - 1) {
-        await new Promise(resolve => setTimeout(resolve, 100));
+    // Generate embeddings using LangChain (with built-in optimizations)
+    console.log('🧠 Generating embeddings with LangChain...');
+    const texts = documents.map(doc => doc.pageContent);
+    const embeddingVectors = await embeddings.embedDocuments(texts);
+
+    // Prepare vectors for Pinecone
+    const vectors = documents.map((doc, i) => ({
+      id: `${source}-${Date.now()}-${i}`,
+      values: embeddingVectors[i],
+      metadata: {
+        content: doc.pageContent,
+        source: doc.metadata.source,
+        fileName: doc.metadata.fileName,
+        fileType: doc.metadata.fileType,
+        chunkIndex: i,
+        uploadedAt: doc.metadata.uploadedAt,
       }
-    }
+    }));
+
+    console.log(`🔄 Processed ${vectors.length} vectors with optimized embeddings`);
 
     console.log(`📤 Uploading ${vectors.length} vectors to Pinecone...`);
 
@@ -139,10 +107,11 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: `Successfully processed ${file.name}`,
-      chunksProcessed: chunks.length,
+      message: `Successfully processed ${file.name} using LangChain optimizations`,
+      chunksProcessed: documents.length,
       fileName: file.name,
-      source: source
+      source: source,
+      optimization: 'LangChain RecursiveCharacterTextSplitter + OpenAI Embeddings'
     });
 
   } catch (error) {
@@ -157,6 +126,12 @@ export async function POST(req: NextRequest) {
 // GET - List documents (get unique sources from Pinecone)
 export async function GET() {
   try {
+    // Initialize Pinecone for GET request
+    const pinecone = new Pinecone({
+      apiKey: process.env.PINECONE_API_KEY!,
+    });
+    const index = pinecone.index(process.env.PINECONE_INDEX_NAME!);
+    
     // Query with empty vector to get metadata (this is a workaround)
     // In production, you might want to maintain a separate index of documents
     const queryResponse = await index.query({
@@ -209,6 +184,12 @@ export async function DELETE(req: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Initialize Pinecone for DELETE request
+    const pinecone = new Pinecone({
+      apiKey: process.env.PINECONE_API_KEY!,
+    });
+    const index = pinecone.index(process.env.PINECONE_INDEX_NAME!);
 
     // Query vectors with matching source and fileName
     const queryResponse = await index.query({

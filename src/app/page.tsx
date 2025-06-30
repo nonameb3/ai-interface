@@ -36,7 +36,11 @@ export default function PortfolioAssistant() {
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      handleSubmit(e as any);
+      // Find the parent form and submit it
+      const form = e.currentTarget.closest('form');
+      if (form) {
+        form.requestSubmit();
+      }
     }
   };
 
@@ -68,8 +72,8 @@ export default function PortfolioAssistant() {
 
           {/* Compact Input Box */}
           <div className="w-full max-w-2xl">
-            <div className="flex items-center gap-3 bg-white rounded-full px-4 py-2.5 border border-gray-200 shadow-sm">
-              <Button variant="ghost" size="sm" className="text-xs text-gray-600 px-3 py-1 h-auto">
+            <form onSubmit={handleSubmit} className="flex items-center gap-3 bg-white rounded-full px-4 py-2.5 border border-gray-200 shadow-sm">
+              <Button variant="ghost" size="sm" className="text-xs text-gray-600 px-3 py-1 h-auto" type="button">
                 <Settings className="w-3 h-3 mr-1" />
                 Tools
               </Button>
@@ -80,7 +84,7 @@ export default function PortfolioAssistant() {
                 placeholder="Ask about my experience, projects, or skills..."
                 className="flex-1 border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 text-sm text-gray-900 placeholder:text-gray-500"
               />
-            </div>
+            </form>
           </div>
         </div>
       ) : (
@@ -136,8 +140,8 @@ export default function PortfolioAssistant() {
           <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-white via-white/95 to-transparent">
             <div className="p-4 pt-8">
               <div className="max-w-3xl mx-auto">
-                <div className="flex items-center gap-2 bg-white/95 rounded-full px-3 py-2 shadow-lg border border-gray-200/50">
-                  <Button variant="ghost" size="sm" className="text-xs text-gray-600 px-2 py-1 h-auto">
+                <form onSubmit={handleSubmit} className="flex items-center gap-2 bg-white/95 rounded-full px-3 py-2 shadow-lg border border-gray-200/50">
+                  <Button variant="ghost" size="sm" className="text-xs text-gray-600 px-2 py-1 h-auto" type="button">
                     <Settings className="w-3 h-3 mr-1" />
                     Tools
                   </Button>
@@ -149,7 +153,7 @@ export default function PortfolioAssistant() {
                     className="flex-1 border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 text-sm text-gray-900"
                     disabled={chatIsLoading}
                   />
-                </div>
+                </form>
                 <p className="text-center text-xs text-gray-500 mt-3">AI assistant can make mistakes. Check important info.</p>
               </div>
             </div>
