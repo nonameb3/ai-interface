@@ -3,6 +3,9 @@
 import { useState, useEffect, useRef } from "react";
 import { MessageCircle, Settings, ChevronDown, User, ArrowDown } from "lucide-react";
 import { useChat } from "@ai-sdk/react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import rehypeHighlight from "rehype-highlight";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -103,29 +106,31 @@ export default function PortfolioAssistant() {
                   ) : (
                     <div className="space-y-3">
                       <div className="text-gray-900 max-w-2xl">
-                        <p className="text-sm leading-relaxed">
-                          {message.content}
+                        <div className="text-sm leading-relaxed markdown-content">
+                          <ReactMarkdown
+                            remarkPlugins={[remarkGfm]}
+                            rehypePlugins={[rehypeHighlight]}
+                            components={{
+                              strong: ({children}) => <strong className="font-semibold text-gray-900">{children}</strong>,
+                              code: ({children}) => <code className="bg-gray-100 text-blue-600 px-1 py-0.5 rounded text-xs font-mono">{children}</code>,
+                              pre: ({children}) => <pre className="bg-gray-100 p-3 rounded-lg text-xs overflow-x-auto my-2">{children}</pre>,
+                              p: ({children}) => <p className="mb-2 text-gray-900">{children}</p>,
+                              ul: ({children}) => <ul className="list-disc ml-4 mb-2 text-gray-900">{children}</ul>,
+                              ol: ({children}) => <ol className="list-decimal ml-4 mb-2 text-gray-900">{children}</ol>,
+                              li: ({children}) => <li className="mb-1">{children}</li>,
+                              h1: ({children}) => <h1 className="text-lg font-semibold mb-2 text-gray-900">{children}</h1>,
+                              h2: ({children}) => <h2 className="text-base font-semibold mb-2 text-gray-900">{children}</h2>,
+                              h3: ({children}) => <h3 className="text-sm font-semibold mb-1 text-gray-900">{children}</h3>,
+                            }}
+                          >
+                            {message.content}
+                          </ReactMarkdown>
                           {/* Show typing cursor for the last streaming message */}
                           {status !== "ready" && status !== "submitted" && messages.indexOf(message) === messages.length - 1 && (
                             <span className="inline-block w-0.5 h-4 bg-blue-500 ml-1 animate-pulse"></span>
                           )}
-                        </p>
-                      </div>
-                      {/* Streaming Indicator */}
-                      {status !== "ready" && status !== "submitted" && messages.length > 0 && (
-                        <div className="space-y-3">
-                          <div className="text-gray-500 max-w-2xl">
-                            <div className="flex items-center gap-2">
-                              <div className="flex gap-1">
-                                <div className="w-1 h-1 bg-blue-500 rounded-full animate-bounce"></div>
-                                <div className="w-1 h-1 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: "0.1s" }}></div>
-                                <div className="w-1 h-1 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: "0.2s" }}></div>
-                              </div>
-                              <p className="text-sm">✍️ Streaming response...</p>
-                            </div>
-                          </div>
                         </div>
-                      )}
+                      </div>
                       <div className="flex items-center gap-2">
                         <Button variant="ghost" size="sm" className="p-1.5 h-auto">
                           <MessageCircle className="w-3.5 h-3.5 text-gray-500" />
