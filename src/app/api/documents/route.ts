@@ -82,9 +82,9 @@ export async function POST(req: NextRequest) {
     const texts = documents.map(doc => doc.pageContent);
     const embeddingVectors = await embeddings.embedDocuments(texts);
 
-    // Prepare vectors for Pinecone
+    // Prepare vectors for Pinecone with deterministic IDs
     const vectors = documents.map((doc, i) => ({
-      id: `${source}-${Date.now()}-${i}`,
+      id: `${source}-${file.name}-chunk-${i}`, // Deterministic ID based on source + filename + chunk
       values: embeddingVectors[i],
       metadata: {
         content: doc.pageContent,
@@ -99,8 +99,9 @@ export async function POST(req: NextRequest) {
     console.log(`🔄 Processed ${vectors.length} vectors with optimized embeddings`);
 
     console.log(`📤 Uploading ${vectors.length} vectors to Pinecone...`);
+    console.log(`📋 Using deterministic IDs - will UPDATE existing vectors if same file is uploaded again`);
 
-    // Upload vectors to Pinecone
+    // Upload vectors to Pinecone (upsert = insert or update)
     await index.upsert(vectors);
 
     console.log('✅ Upload successful!');
