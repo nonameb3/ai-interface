@@ -2,36 +2,20 @@
 
 import { useState, useEffect, useRef } from "react";
 import { MessageCircle, Settings, ChevronDown, User, ArrowDown } from "lucide-react";
+import { useChat } from "ai/react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-interface Message {
-  id: string;
-  content: string;
-  isUser: boolean;
-}
-
-const mockResponses = [
-  "I have over 5 years of experience in full-stack development, specializing in React, Node.js, and cloud technologies. I've built scalable applications serving thousands of users and led development teams on multiple successful projects.",
-  "My recent projects include a real-time trading platform with 99.9% uptime, an AI-powered analytics dashboard that increased efficiency by 40%, and a microservices architecture that reduced costs by 60%. I also developed a blockchain-based voting system and a machine learning recommendation engine.",
-  "I'm proficient in JavaScript, TypeScript, Python, React, Next.js, Node.js, PostgreSQL, MongoDB, AWS, Docker, and Kubernetes. I also have experience with machine learning frameworks like TensorFlow and PyTorch, and I'm certified in multiple cloud platforms.",
-  "I've worked at several tech companies including a fintech startup where I was lead developer, a SaaS company where I built their core platform, and currently freelancing for Fortune 500 clients. I've also contributed to open-source projects with over 10k GitHub stars.",
-  "I hold a Computer Science degree from MIT and have certifications in AWS Solutions Architecture and Google Cloud Platform. I'm also a contributor to several open-source projects and have spoken at tech conferences about scalable architecture patterns.",
-  "You can reach me at john.doe@email.com or connect with me on LinkedIn. I'm always open to discussing new opportunities and interesting projects! I'm particularly interested in AI/ML projects and fintech applications.",
-];
 
 export default function PortfolioAssistant() {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [inputValue, setInputValue] = useState("");
-  const [isTyping, setIsTyping] = useState(false);
   const [showScrollButton, setShowScrollButton] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
-
-  const getRandomResponse = () => {
-    return mockResponses[Math.floor(Math.random() * mockResponses.length)];
-  };
+  
+  const { messages, input, handleInputChange, handleSubmit, isLoading: chatIsLoading } = useChat({
+    api: '/api/chat',
+  });
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -49,34 +33,10 @@ export default function PortfolioAssistant() {
     scrollToBottom();
   }, [messages]);
 
-  const handleSendMessage = () => {
-    if (inputValue.trim()) {
-      const userMessage: Message = {
-        id: Date.now().toString(),
-        content: inputValue,
-        isUser: true,
-      };
-
-      setMessages((prev) => [...prev, userMessage]);
-      setInputValue("");
-      setIsTyping(true);
-
-      // Simulate AI response delay
-      setTimeout(() => {
-        const aiMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          content: getRandomResponse(),
-          isUser: false,
-        };
-        setMessages((prev) => [...prev, aiMessage]);
-        setIsTyping(false);
-      }, 1500);
-    }
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      handleSendMessage();
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit(e as any);
     }
   };
 
@@ -114,9 +74,9 @@ export default function PortfolioAssistant() {
                 Tools
               </Button>
               <Input
-                value={inputValue}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setInputValue(e.target.value)}
-                onKeyPress={handleKeyPress}
+                value={input}
+                onChange={handleInputChange}
+                onKeyDown={handleKeyDown}
                 placeholder="Ask about my experience, projects, or skills..."
                 className="flex-1 border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 text-sm text-gray-900 placeholder:text-gray-500"
               />
@@ -130,7 +90,7 @@ export default function PortfolioAssistant() {
             <div className="max-w-3xl mx-auto space-y-8 py-8">
               {messages.map((message) => (
                 <div key={message.id}>
-                  {message.isUser ? (
+                  {message.role === 'user' ? (
                     <div className="flex justify-end">
                       <div className="bg-gray-100 text-gray-900 px-4 py-2 rounded-2xl max-w-xs">
                         <p className="text-sm">{message.content}</p>
@@ -151,8 +111,8 @@ export default function PortfolioAssistant() {
                 </div>
               ))}
 
-              {/* Typing Indicator */}
-              {isTyping && (
+              {/* Loading Indicator */}
+              {chatIsLoading && (
                 <div className="space-y-3">
                   <div className="text-gray-500 max-w-2xl">
                     <p className="text-sm">Thinking...</p>
@@ -182,12 +142,12 @@ export default function PortfolioAssistant() {
                     Tools
                   </Button>
                   <Input
-                    value={inputValue}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setInputValue(e.target.value)}
-                    onKeyPress={handleKeyPress}
+                    value={input}
+                    onChange={handleInputChange}
+                    onKeyDown={handleKeyDown}
                     placeholder="Ask about my experience, projects, or skills..."
                     className="flex-1 border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 text-sm text-gray-900"
-                    disabled={isTyping}
+                    disabled={chatIsLoading}
                   />
                 </div>
                 <p className="text-center text-xs text-gray-500 mt-3">AI assistant can make mistakes. Check important info.</p>
