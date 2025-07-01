@@ -5,6 +5,18 @@ import { Pinecone } from '@pinecone-database/pinecone';
 import { OpenAIEmbeddings } from '@langchain/openai';
 import { PromptTemplate } from '@langchain/core/prompts';
 
+// CORS headers with environment-based origin control
+const getAllowedOrigin = () => {
+  const allowedDomains = process.env.ALLOWED_DOMAINS || 'http://localhost:3000';
+  return allowedDomains;
+};
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': getAllowedOrigin(),
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+
 // Initialize LangChain components
 const embeddings = new OpenAIEmbeddings({
   openAIApiKey: process.env.OPENAI_API_KEY!,
@@ -126,9 +138,27 @@ export async function POST(req: NextRequest) {
       maxTokens: 2000, // Increased token limit for more detailed responses
     });
 
-    return result.toDataStreamResponse();
+    const response = result.toDataStreamResponse();
+    
+    // Add CORS headers to the response
+    Object.entries(corsHeaders).forEach(([key, value]) => {
+      response.headers.set(key, value);
+    });
+    
+    return response;
   } catch (error) {
     console.error('Chat API error:', error);
-    return new Response('Internal server error', { status: 500 });
+    return new Response('Internal server error', { 
+      status: 500,
+      headers: corsHeaders
+    });
   }
+}
+
+// Handle preflight OPTIONS request
+export async function OPTIONS() {
+  return new Response(null, {
+    status: 200,
+    headers: corsHeaders,
+  });
 }

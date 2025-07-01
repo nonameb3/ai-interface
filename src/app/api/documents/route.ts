@@ -3,6 +3,18 @@ import { Pinecone } from '@pinecone-database/pinecone';
 import { RecursiveCharacterTextSplitter } from 'langchain/text_splitter';
 import { OpenAIEmbeddings } from '@langchain/openai';
 
+// CORS headers with environment-based origin control
+const getAllowedOrigin = () => {
+  const allowedDomains = process.env.ALLOWED_DOMAINS || 'http://localhost:3000';
+  return allowedDomains;
+};
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': getAllowedOrigin(),
+  'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+
 
 // Initialize LangChain components
 const embeddings = new OpenAIEmbeddings({
@@ -108,13 +120,13 @@ export async function POST(req: NextRequest) {
       fileName: file.name,
       source: source,
       optimization: 'LangChain RecursiveCharacterTextSplitter + OpenAI Embeddings'
-    });
+    }, { headers: corsHeaders });
 
   } catch (error) {
     console.error('❌ Document processing error:', error);
     return NextResponse.json(
       { error: `Failed to process document: ${error}` },
-      { status: 500 }
+      { status: 500, headers: corsHeaders }
     );
   }
 }
@@ -156,15 +168,23 @@ export async function GET() {
 
     return NextResponse.json({
       documents: Array.from(documents.values())
-    });
+    }, { headers: corsHeaders });
 
   } catch (error) {
     console.error('Error fetching documents:', error);
     return NextResponse.json(
       { error: 'Failed to fetch documents' },
-      { status: 500 }
+      { status: 500, headers: corsHeaders }
     );
   }
+}
+
+// Handle preflight OPTIONS request
+export async function OPTIONS() {
+  return new Response(null, {
+    status: 200,
+    headers: corsHeaders,
+  });
 }
 
 // DELETE - Remove document by source or delete all documents
