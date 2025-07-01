@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { MessageCircle, Settings, ChevronDown, User, ArrowDown } from "lucide-react";
+import { MessageCircle, Brain, Settings, Github, ArrowDown } from "lucide-react";
 import { useChat } from "@ai-sdk/react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -51,18 +51,17 @@ export default function PortfolioAssistant() {
   return (
     <div className="h-screen bg-white flex flex-col relative">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 bg-white z-10">
+      <div className="flex items-center justify-between p-4 px-8 bg-white z-10">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-indigo-500 rounded-full flex items-center justify-center">
-            <MessageCircle className="w-4 h-4 text-white" />
+          <div className="w-8 h-8 bg-zinc-800 rounded-full flex items-center justify-center">
+            <Brain className="w-4 h-4 text-white" />
           </div>
-          <h1 className="text-lg font-medium text-gray-900">Portfolio Assistant</h1>
-          <ChevronDown className="w-4 h-4 text-gray-500" />
+          <h1 className="text-lg font-medium text-gray-900">AI-Power Portfolio</h1>
         </div>
         <div className="flex items-center gap-3">
           <span className="text-sm font-medium text-gray-700">{portfolioName}</span>
-          <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center">
-            <User className="w-4 h-4 text-white" />
+          <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
+            <Github className="w-4 h-4 text-black" />
           </div>
         </div>
       </div>
