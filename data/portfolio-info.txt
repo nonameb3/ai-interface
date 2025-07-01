@@ -1,7 +1,7 @@
 Portfolio Information - John Doe
 
 EXPERIENCE:
-I am a senior full-stack developer with over 5 years of experience building scalable web applications. I specialize in React, Node.js, and cloud technologies including AWS and Google Cloud Platform.
+Full-stack developer with 5+ years of experience building web applications using React, Node.js, and cloud technologies.
 
 RECENT PROJECTS:
 1. Real-time Trading Platform - Built a high-performance trading platform that handles thousands of concurrent users with 99.9% uptime. Used React, Node.js, WebSocket connections, and Redis for real-time data processing.
@@ -61,10 +61,10 @@ ACHIEVEMENTS:
 - Published technical articles with 500,000+ total views
 
 CONTACT:
-Email: john.doe@email.com
-LinkedIn: linkedin.com/in/johndoe-developer
-GitHub: github.com/johndoe-dev
-Portfolio: johndoe-portfolio.com
+Email: john.doe@example.com
+LinkedIn: linkedin.com/in/johndoe
+GitHub: github.com/johndoe
+Portfolio: johndoe.dev
 
 AVAILABILITY:
 Currently available for freelance projects and consulting opportunities. Particularly interested in AI/ML projects, fintech applications, and blockchain development. Open to both short-term projects and long-term collaborations.

@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 
 export default function PortfolioAssistant() {
   const [showScrollButton, setShowScrollButton] = useState(false);
+  const portfolioName = process.env.NEXT_PUBLIC_PORTFOLIO_NAME || "John Doe";
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
@@ -34,6 +35,7 @@ export default function PortfolioAssistant() {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -58,7 +60,7 @@ export default function PortfolioAssistant() {
           <ChevronDown className="w-4 h-4 text-gray-500" />
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-sm font-medium text-gray-700">Waraphon Roonnapai</span>
+          <span className="text-sm font-medium text-gray-700">{portfolioName}</span>
           <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center">
             <User className="w-4 h-4 text-white" />
           </div>
@@ -83,7 +85,7 @@ export default function PortfolioAssistant() {
                 value={input}
                 onChange={handleInputChange}
                 onKeyDown={handleKeyDown}
-                placeholder="Ask about my experience, projects, or skills..."
+                placeholder={`Ask about ${portfolioName}'s experience, projects, or skills...`}
                 className="flex-1 border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 text-sm text-gray-900 placeholder:text-gray-500"
                 disabled={status !== "ready"}
               />
@@ -181,7 +183,7 @@ export default function PortfolioAssistant() {
                     value={input}
                     onChange={handleInputChange}
                     onKeyDown={handleKeyDown}
-                    placeholder="Ask about my experience, projects, or skills..."
+                    placeholder={`Ask about ${portfolioName}'s experience, projects, or skills...`}
                     className="flex-1 border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 text-sm text-gray-900"
                     disabled={status !== "ready"}
                   />

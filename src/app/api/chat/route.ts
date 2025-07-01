@@ -17,21 +17,30 @@ const pinecone = new Pinecone({
 
 // LangChain optimized RAG prompt template
 const ragPromptTemplate = PromptTemplate.fromTemplate(`
-You are a helpful AI assistant for a portfolio website. Use the following context from the knowledge base to answer questions about the person's experience, skills, and projects.
+You are {portfolioName}'s portfolio information system. Provide factual, direct answers about their professional background only.
 
 Context from knowledge base:
 {context}
 
-Instructions:
-- Use the provided context to give accurate, detailed responses
-- If the context doesn't contain relevant information, politely indicate that you don't have that specific information
-- Be conversational and helpful
-- Focus on the person's professional background, skills, and projects
-- If no context is available, provide a general helpful response
+RESPONSE RULES:
+- Give direct, factual answers only
+- Do NOT ask follow-up questions
+- Do NOT offer additional help or guidance
+- Do NOT be conversational or chatty
+- Do NOT say "feel free to ask" or "would you like to know more"
+- Do NOT suggest other topics or provide recommendations
+- If specific information is not available, simply state "This information is not available in the portfolio"
+- For general questions like "who is {portfolioName}", provide a summary based on available context
+- For off-topic questions, respond only: "I only provide information about {portfolioName}'s professional background"
+- Be concise and professional
+- State facts directly without elaboration unless specifically requested
+
+ALLOWED TOPICS: {portfolioName}'s experience, skills, projects, education, work history, achievements, contact information
+FORBIDDEN: Everything else
 
 Question: {question}
 
-Answer:`);
+Direct Answer:`);
 
 // LangChain optimized context retrieval
 async function retrieveContext(query: string, topK: number = 3) {
@@ -73,7 +82,15 @@ export async function POST(req: NextRequest) {
     }
 
     // Retrieve relevant context using LangChain optimized RAG
-    const contexts = await retrieveContext(latestMessage.content);
+    let contexts = await retrieveContext(latestMessage.content, 5);
+    
+    // If no good matches, try a broader search
+    if (contexts.length === 0 || (contexts[0]?.score || 0) < 0.5) {
+      if (latestMessage.content.toLowerCase().includes('who is')) {
+        const portfolioName = process.env.NEXT_PUBLIC_PORTFOLIO_NAME || 'John Doe';
+        contexts = await retrieveContext(`${portfolioName} experience skills background`, 3);
+      }
+    }
     
     // Build context string with scores for better quality
     const contextString = contexts.length > 0 
@@ -81,7 +98,9 @@ export async function POST(req: NextRequest) {
       : 'No relevant context found in knowledge base.';
 
     // Use LangChain's optimized prompt template
+    const portfolioName = process.env.NEXT_PUBLIC_PORTFOLIO_NAME || 'John Doe';
     const systemPrompt = await ragPromptTemplate.format({
+      portfolioName: portfolioName,
       context: contextString,
       question: latestMessage.content
     });
@@ -91,6 +110,7 @@ export async function POST(req: NextRequest) {
       { role: 'system', content: systemPrompt },
       ...messages
     ];
+
 
     // Generate streaming response
     const result = await streamText({

@@ -1,36 +1,107 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AI Portfolio Assistant
 
-## Getting Started
+A Next.js application that provides an AI-powered portfolio assistant using RAG (Retrieval-Augmented Generation) with Pinecone vector database.
 
-First, run the development server:
+## Features
+
+- **Environment-based Configuration**: Uses environment variables for easy deployment
+- **Admin Panel**: Simple CMS for managing portfolio documents
+- **Markdown Support**: Properly formatted AI responses
+- **RAG System**: Vector-based knowledge retrieval with LangChain optimization
+
+## Environment Variables
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# Required
+OPENAI_API_KEY=your_openai_api_key
+PINECONE_API_KEY=your_pinecone_api_key
+PINECONE_INDEX_NAME=portfolio-knowledge
+
+# Optional (with defaults)
+NEXT_PUBLIC_PORTFOLIO_NAME=John Doe  # Name displayed in UI and used by AI
+ADMIN_PASSWORD=admin123  # Password for admin panel access
+OPENAI_MODEL=gpt-4o-mini
+EMBEDDING_MODEL=text-embedding-3-small
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Quick Start
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. **Install dependencies:**
+   ```bash
+   pnpm install
+   ```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+2. **Set up environment variables:**
+   ```bash
+   cp .env.example .env.local
+   # Edit .env.local with your API keys
+   ```
 
-## Learn More
+3. **Create Pinecone index:**
+   ```bash
+   pnpm run setup-pinecone
+   ```
 
-To learn more about Next.js, take a look at the following resources:
+4. **Upload portfolio data:**
+   ```bash
+   # Edit data/portfolio-info.txt with your information
+   pnpm run upload
+   ```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+5. **Start development server:**
+   ```bash
+   pnpm dev
+   ```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Admin Panel
 
-## Deploy on Vercel
+Access the admin panel at `/admin` using the password set in `ADMIN_PASSWORD`.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Features:
+- Upload new documents
+- Delete all documents
+- View current document count
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Deployment
+
+### For Production:
+
+1. **Set environment variables** in your hosting platform:
+   ```bash
+   NEXT_PUBLIC_PORTFOLIO_NAME=Your Real Name
+   ADMIN_PASSWORD=your_secure_password
+   # ... other API keys
+   ```
+
+2. **Update portfolio data** in `data/portfolio-info.txt` with your real information
+
+3. **Deploy** and **upload your data** via the admin panel
+
+The system will automatically use your environment variables for personalization.
+
+## File Structure
+
+```
+src/
+├── app/
+│   ├── admin/          # Admin CMS page
+│   ├── api/
+│   │   ├── chat/       # AI chat endpoint
+│   │   ├── documents/  # Document management
+│   │   └── portfolio-name/ # Dynamic name API
+│   └── page.tsx        # Main chat interface
+data/
+└── portfolio-info.txt  # Portfolio content (edit this)
+scripts/
+├── setup-pinecone.ts  # Initialize vector database
+├── upload-documents.ts # Upload portfolio data
+└── purge-pinecone.ts  # Clear all data
+```
+
+## Commands
+
+- `pnpm dev` - Development server
+- `pnpm build` - Production build
+- `pnpm run setup-pinecone` - Create Pinecone index
+- `pnpm run upload` - Upload portfolio documents
+- `pnpm run purge-pinecone -- --force` - Delete all vector data

@@ -78,22 +78,24 @@ async function uploadMultipleDocuments(documents: { filePath: string; source: st
   }
 }
 
-// Example usage - you can modify this list
+// Simple upload using portfolio-info.txt
 async function main() {
+  const portfolioFile = './data/portfolio-info.txt';
+  
+  console.log(`📄 Uploading: ${portfolioFile}`);
+  
+  // Check if the file exists
+  if (!fs.existsSync(portfolioFile)) {
+    console.error(`❌ Portfolio file not found: ${portfolioFile}`);
+    console.log('💡 Create the file with your portfolio information first');
+    process.exit(1);
+  }
+  
   const documentsToUpload = [
     {
-      filePath: './data/portfolio-info.txt',
+      filePath: portfolioFile,
       source: 'portfolio-info'
-    },
-    // Add more documents here:
-    // {
-    //   filePath: './data/resume.pdf',
-    //   source: 'resume'
-    // },
-    // {
-    //   filePath: './data/project-details.md',
-    //   source: 'projects'
-    // }
+    }
   ];
   
   await uploadMultipleDocuments(documentsToUpload);

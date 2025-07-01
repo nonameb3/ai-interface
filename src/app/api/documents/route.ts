@@ -172,25 +172,38 @@ export async function GET() {
   }
 }
 
-// DELETE - Remove document by source
+// DELETE - Remove document by source or delete all documents
 export async function DELETE(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const source = searchParams.get('source');
     const fileName = searchParams.get('fileName');
-
-    if (!source || !fileName) {
-      return NextResponse.json(
-        { error: 'Source and fileName parameters required' },
-        { status: 400 }
-      );
-    }
+    const deleteAll = searchParams.get('deleteAll') === 'true';
 
     // Initialize Pinecone for DELETE request
     const pinecone = new Pinecone({
       apiKey: process.env.PINECONE_API_KEY!,
     });
     const index = pinecone.index(process.env.PINECONE_INDEX_NAME!);
+
+    if (deleteAll) {
+      // Delete all documents from the index
+      await index.deleteAll();
+      
+      return NextResponse.json({
+        success: true,
+        message: 'All documents deleted successfully',
+        action: 'deleteAll'
+      });
+    }
+
+    // Single document deletion (existing logic)
+    if (!source || !fileName) {
+      return NextResponse.json(
+        { error: 'Source and fileName parameters required for single document deletion' },
+        { status: 400 }
+      );
+    }
 
     // Query vectors with matching source and fileName
     const queryResponse = await index.query({

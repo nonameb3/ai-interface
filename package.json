@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "upload": "tsx scripts/upload-documents.ts",
-    "setup-pinecone": "tsx scripts/setup-pinecone.ts"
+    "setup-pinecone": "tsx scripts/setup-pinecone.ts",
+    "purge-pinecone": "tsx scripts/purge-pinecone.ts"
   },
   "dependencies": {
     "@ai-sdk/openai": "^1.3.22",
