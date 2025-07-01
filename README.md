@@ -2,6 +2,12 @@
 
 A modern, interactive portfolio assistant built with Next.js 15, featuring AI-powered chat interface, suggestion badges, and comprehensive document management. Uses RAG (Retrieval-Augmented Generation) with Pinecone vector database for intelligent responses.
 
+## 🌐 Live Demo
+
+**Try it live:** [https://ai-chat.roonnapai.dev/](https://ai-chat.roonnapai.dev/)
+
+![Demo Screenshot](image/image.png)
+
 ## ✨ Features
 
 ### 🎯 **Interactive Chat Interface**
