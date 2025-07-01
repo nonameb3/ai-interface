@@ -36,15 +36,10 @@ export async function POST(req: NextRequest) {
     const fileBuffer = Buffer.from(await file.arrayBuffer());
 
     // Extract text based on file type
-    if (file.type === 'application/pdf') {
-      try {
-        const pdf = (await import('pdf-parse')).default;
-        const pdfData = await pdf(fileBuffer);
-        text = pdfData.text;
-      } catch (error) {
-        console.error('PDF parsing error:', error);
-        return NextResponse.json({ error: 'Failed to parse PDF file' }, { status: 400 });
-      }
+    if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
+      return NextResponse.json({ 
+        error: 'PDF files are not supported. Please convert your PDF to .txt format:\n\n1. Open your PDF\n2. Select All (Ctrl+A / Cmd+A)\n3. Copy (Ctrl+C / Cmd+C)\n4. Paste into a text editor\n5. Save as .txt file\n6. Upload the .txt file instead\n\nAlternatively, use online PDF to text converters.' 
+      }, { status: 400 });
     } else if (file.type === 'text/plain' || file.name.endsWith('.txt')) {
       text = fileBuffer.toString('utf-8');
     } else if (file.name.endsWith('.md')) {

@@ -6,19 +6,42 @@ import { Input } from "@/components/ui/input";
 
 export default function AdminPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [documents, setDocuments] = useState<Array<{source: string; fileName: string; fileType?: string; uploadedAt?: string}>>([]);
   const [loading, setLoading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<string[]>([]);
+  const [adminDisabled, setAdminDisabled] = useState(false);
   const portfolioName = process.env.NEXT_PUBLIC_PORTFOLIO_NAME || "John Doe";
 
   useEffect(() => {
-    // Check if already authenticated
-    const auth = sessionStorage.getItem('adminAuth');
-    if (auth === 'true') {
-      setIsAuthenticated(true);
-      loadDocuments();
-    }
+    // Check if admin is properly configured
+    const checkAdminConfig = async () => {
+      try {
+        const response = await fetch('/api/admin/auth', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password: 'config-check' })
+        });
+        
+        const data = await response.json();
+        
+        // If we get a specific error about admin being disabled, disable the page
+        if (response.status === 503 || data.error === 'Admin panel disabled') {
+          setAdminDisabled(true);
+        }
+      } catch (error) {
+        console.error('Admin config check failed:', error);
+        setAdminDisabled(true);
+      }
+      
+      // Always clear authentication on page load for security
+      sessionStorage.removeItem('adminAuth');
+      setIsLoading(false);
+    };
+    
+    checkAdminConfig();
   }, []);
 
   const handleLogin = async () => {
@@ -59,31 +82,67 @@ export default function AdminPage() {
   };
 
   const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
 
-    try {
-      setLoading(true);
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('source', 'portfolio-upload');
+    setLoading(true);
+    setUploadProgress([]);
+    
+    const filesArray = Array.from(files);
+    const totalFiles = filesArray.length;
+    let successCount = 0;
+    const failedFiles: string[] = [];
 
-      const response = await fetch('/api/documents', {
-        method: 'POST',
-        body: formData
-      });
+    for (let i = 0; i < filesArray.length; i++) {
+      const file = filesArray[i];
+      
+      try {
+        setUploadProgress(prev => [...prev, `Uploading ${file.name}...`]);
+        
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('source', 'portfolio-upload');
 
-      if (response.ok) {
-        await loadDocuments();
-        alert('File uploaded successfully!');
-      } else {
-        alert('Upload failed');
+        const response = await fetch('/api/documents', {
+          method: 'POST',
+          body: formData
+        });
+
+        if (response.ok) {
+          successCount++;
+          setUploadProgress(prev => prev.map(p => 
+            p.includes(file.name) ? `✅ ${file.name} - Success` : p
+          ));
+        } else {
+          const errorData = await response.json();
+          failedFiles.push(`${file.name}: ${errorData.error || 'Unknown error'}`);
+          setUploadProgress(prev => prev.map(p => 
+            p.includes(file.name) ? `❌ ${file.name} - Failed` : p
+          ));
+        }
+      } catch (error) {
+        failedFiles.push(`${file.name}: ${error}`);
+        setUploadProgress(prev => prev.map(p => 
+          p.includes(file.name) ? `❌ ${file.name} - Error` : p
+        ));
       }
-    } catch (error) {
-      alert('Upload error: ' + error);
-    } finally {
-      setLoading(false);
     }
+
+    // Show results
+    let message = `Upload completed!\n✅ Successful: ${successCount}/${totalFiles}`;
+    if (failedFiles.length > 0) {
+      message += `\n❌ Failed:\n${failedFiles.join('\n')}`;
+    }
+    alert(message);
+
+    await loadDocuments();
+    setLoading(false);
+    
+    // Clear the input
+    event.target.value = '';
+    
+    // Clear progress after a delay
+    setTimeout(() => setUploadProgress([]), 3000);
   };
 
   const handleDelete = async () => {
@@ -113,6 +172,39 @@ export default function AdminPage() {
     sessionStorage.removeItem('adminAuth');
     setPassword("");
   };
+
+  // Show loading state first
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="text-gray-600">Loading...</div>
+      </div>
+    );
+  }
+
+  // Show disabled state if admin is not configured
+  if (adminDisabled) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md text-center">
+          <div className="text-red-500 text-6xl mb-4">🚫</div>
+          <h1 className="text-2xl font-bold mb-4 text-gray-800">Admin Panel Disabled</h1>
+          <p className="text-gray-600 mb-4">
+            The admin panel is disabled because no admin password is configured.
+          </p>
+          <div className="bg-gray-50 p-4 rounded-lg text-left">
+            <p className="text-sm text-gray-700 font-medium mb-2">To enable admin access:</p>
+            <code className="text-xs text-blue-600 bg-white p-2 rounded border block">
+              ADMIN_PASSWORD=your_secure_password
+            </code>
+            <p className="text-xs text-gray-500 mt-2">
+              Add this to your .env.local file or environment variables
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return (
@@ -150,17 +242,51 @@ export default function AdminPage() {
             {/* Upload Section */}
             <div className="space-y-4">
               <h2 className="text-xl font-semibold">Upload Documents</h2>
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
-                <input
-                  type="file"
-                  accept=".txt,.pdf,.md"
-                  onChange={handleUpload}
-                  className="w-full"
-                  disabled={loading}
-                />
-                <p className="text-sm text-gray-500 mt-2">
-                  Supported: .txt, .pdf, .md files
-                </p>
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                <div className="space-y-4">
+                  <div className="text-gray-400">
+                    <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                    </svg>
+                  </div>
+                  <div>
+                    <Button 
+                      onClick={() => document.getElementById('file-upload')?.click()}
+                      disabled={loading}
+                    >
+                      {loading ? 'Uploading...' : 'Choose Files to Upload'}
+                    </Button>
+                    <input
+                      id="file-upload"
+                      type="file"
+                      accept=".txt,.md"
+                      onChange={handleUpload}
+                      className="hidden"
+                      disabled={loading}
+                      multiple
+                    />
+                  </div>
+                  <p className="text-sm text-gray-500">
+                    Supported: .txt, .md files (multiple files allowed)
+                  </p>
+                  <p className="text-xs text-orange-600 mt-1">
+                    📄 For PDFs: Convert to .txt first using online converters
+                  </p>
+                  
+                  {/* Upload Progress */}
+                  {uploadProgress.length > 0 && (
+                    <div className="mt-4 space-y-1">
+                      <h3 className="text-sm font-medium text-gray-700">Upload Progress:</h3>
+                      <div className="bg-gray-50 rounded p-3 max-h-32 overflow-y-auto">
+                        {uploadProgress.map((progress, index) => (
+                          <div key={index} className="text-xs text-gray-600">
+                            {progress}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 

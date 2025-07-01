@@ -57,10 +57,14 @@ EMBEDDING_MODEL=text-embedding-3-small
 
 Access the admin panel at `/admin` using the password set in `ADMIN_PASSWORD`.
 
+**Security:** If `ADMIN_PASSWORD` is not set, the admin panel will be completely disabled for security.
+
 Features:
-- Upload new documents
+- Upload new documents (.txt, .md files)
 - Delete all documents
 - View current document count
+- Password-protected access
+- Auto-disabled if no password is configured
 
 ## Deployment
 
