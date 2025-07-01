@@ -9,14 +9,30 @@ import rehypeHighlight from "rehype-highlight";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SuggestionBadge } from "@/components/ui/suggestion-badge";
 
 export default function PortfolioAssistant() {
   const [showScrollButton, setShowScrollButton] = useState(false);
+  const [clickedBadges, setClickedBadges] = useState<Set<number>>(new Set());
   const portfolioName = process.env.NEXT_PUBLIC_PORTFOLIO_NAME || "John Doe";
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
-  const { messages, input, handleInputChange, handleSubmit, status } = useChat({
+  // Smart suggestion questions
+  const initialSuggestions = [
+    `What are ${portfolioName}'s key technical skills?`,
+    `Tell me about recent projects`,
+    `What's ${portfolioName}'s professional background?`,
+    `Show me their development experience`
+  ];
+
+  const chatSuggestions = [
+    "Can you explain that in more detail?",
+    "What technologies were used?",
+    `How to contract ${portfolioName}?`
+  ];
+
+  const { messages, input, handleInputChange, handleSubmit, append, status } = useChat({
     api: "/api/chat",
   });
 
@@ -32,9 +48,14 @@ export default function PortfolioAssistant() {
     }
   };
 
+  // Removed auto-scroll - users can control scrolling with the down arrow button
+
+  // Reset clicked badges when conversation starts fresh
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    if (messages.length === 0) {
+      setClickedBadges(new Set());
+    }
+  }, [messages.length]);
 
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -48,6 +69,19 @@ export default function PortfolioAssistant() {
     }
   };
 
+  const handleSuggestionClick = (question: string, badgeIndex?: number) => {
+    // Use the append method to directly send the message without user input
+    append({
+      role: 'user',
+      content: question,
+    });
+
+    // Mark this specific badge as clicked (only for chat suggestions)
+    if (typeof badgeIndex === 'number' && messages.length > 0) {
+      setClickedBadges(prev => new Set([...prev, badgeIndex]));
+    }
+  };
+
   return (
     <div className="h-screen bg-white flex flex-col relative">
       {/* Header */}
@@ -56,7 +90,7 @@ export default function PortfolioAssistant() {
           <div className="w-8 h-8 bg-zinc-800 rounded-full flex items-center justify-center">
             <Brain className="w-4 h-4 text-white" />
           </div>
-          <h1 className="text-lg font-medium text-gray-900">AI-Power Portfolio</h1>
+          <h1 className="text-lg font-medium text-gray-900">AI-powered Portfolio</h1>
         </div>
         <div className="flex items-center gap-3">
           <span className="text-sm font-medium text-gray-700">{portfolioName}</span>
@@ -89,6 +123,19 @@ export default function PortfolioAssistant() {
                 disabled={status !== "ready"}
               />
             </form>
+            
+            {/* Suggestion Badges - Hidden on mobile */}
+            <div className="hidden md:flex flex-wrap gap-2 justify-center mt-4">
+              {initialSuggestions.map((suggestion, index) => (
+                <SuggestionBadge
+                  key={index}
+                  question={suggestion}
+                  onQuestionClick={handleSuggestionClick}
+                  variant="default"
+                  size="sm"
+                />
+              ))}
+            </div>
           </div>
         </div>
       ) : (
@@ -148,7 +195,10 @@ export default function PortfolioAssistant() {
                   <div className="text-gray-500 max-w-2xl">
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse"></div>
-                      <p className="text-sm">🧠 Searching knowledge base...</p>
+                      <div className="flex items-center gap-1">
+                        <span className="text-sm">🧠</span>
+                        <p className="text-sm">Searching knowledge base...</p>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -157,9 +207,9 @@ export default function PortfolioAssistant() {
             </div>
           </div>
 
-          {/* Scroll to Bottom Button */}
+          {/* Scroll to Bottom Button - Responsive positioning above input area */}
           {showScrollButton && (
-            <div className="absolute bottom-32 right-8 z-20">
+            <div className="fixed bottom-32 left-1/2 transform -translate-x-1/2 z-20 md:bottom-36 lg:bottom-40">
               <Button onClick={scrollToBottom} className="w-10 h-10 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 shadow-lg" size="sm">
                 <ArrowDown className="w-4 h-4" />
               </Button>
@@ -170,6 +220,21 @@ export default function PortfolioAssistant() {
           <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-white via-white/95 to-transparent">
             <div className="p-4 pt-8">
               <div className="max-w-3xl mx-auto">
+                {/* Chat Suggestion Badges - Hidden on mobile */}
+                <div className="hidden md:flex flex-wrap gap-2 justify-center mb-3">
+                  {chatSuggestions.map((suggestion, index) => (
+                    !clickedBadges.has(index) && (
+                      <SuggestionBadge
+                        key={index}
+                        question={suggestion}
+                        onQuestionClick={(question) => handleSuggestionClick(question, index)}
+                        variant="default"
+                        size="sm"
+                      />
+                    )
+                  ))}
+                </div>
+                
                 <form
                   onSubmit={handleSubmit}
                   className="flex items-center gap-2 bg-white/95 rounded-full px-3 py-2 shadow-lg border border-gray-200/50"

@@ -15,32 +15,38 @@ const pinecone = new Pinecone({
   apiKey: process.env.PINECONE_API_KEY!,
 });
 
-// LangChain optimized RAG prompt template
+// Enhanced professional RAG prompt template
 const ragPromptTemplate = PromptTemplate.fromTemplate(`
-You are {portfolioName}'s portfolio information system. Provide factual, direct answers about their professional background only.
+You are {portfolioName}'s professional AI portfolio assistant. You provide comprehensive, engaging, and professional information about their background, experience, and expertise.
 
 Context from knowledge base:
 {context}
 
-RESPONSE RULES:
-- Give direct, factual answers only
-- Do NOT ask follow-up questions
-- Do NOT offer additional help or guidance
-- Do NOT be conversational or chatty
-- Do NOT say "feel free to ask" or "would you like to know more"
-- Do NOT suggest other topics or provide recommendations
-- If specific information is not available, simply state "This information is not available in the portfolio"
-- For general questions like "who is {portfolioName}", provide a summary based on available context
-- For off-topic questions, respond only: "I only provide information about {portfolioName}'s professional background"
-- Be concise and professional
-- State facts directly without elaboration unless specifically requested
+RESPONSE GUIDELINES:
+- Provide detailed, comprehensive answers that showcase {portfolioName}'s expertise professionally
+- Use a warm, professional, and engaging tone that reflects well on {portfolioName}
+- Structure responses with clear paragraphs and logical flow
+- Include specific details, metrics, technologies, and achievements when available
+- Elaborate on technical skills, project impacts, and professional accomplishments
+- Use formatting like bullet points or sections when helpful for readability
+- If information is limited, provide what's available and suggest ways to learn more
+- For technical questions, explain both the "what" and the "why" behind decisions and approaches
+- Maintain professionalism while being personable and approachable
+- End responses naturally without generic offers of help
 
-ALLOWED TOPICS: {portfolioName}'s experience, skills, projects, education, work history, achievements, contact information
-FORBIDDEN: Everything else
+RESPONSE STRUCTURE:
+- Start with a direct answer to the question
+- Provide supporting details and context
+- Include relevant examples or specifics when available
+- Conclude with relevant additional insights if applicable
+
+TOPICS: {portfolioName}'s professional experience, technical skills, projects, achievements, education, work history, expertise, contact information, career highlights, and related professional insights.
+
+For off-topic questions, politely redirect: "I focus on sharing information about {portfolioName}'s professional background and expertise. Let me help you learn more about their [relevant area]."
 
 Question: {question}
 
-Direct Answer:`);
+Professional Response:`);
 
 // LangChain optimized context retrieval
 async function retrieveContext(query: string, topK: number = 3) {
@@ -112,12 +118,12 @@ export async function POST(req: NextRequest) {
     ];
 
 
-    // Generate streaming response
+    // Generate streaming response with enhanced settings
     const result = await streamText({
       model: openai(process.env.OPENAI_MODEL || 'gpt-4-turbo-preview'),
       messages: messagesWithContext,
-      temperature: 0.7,
-      maxTokens: 1000,
+      temperature: 0.3, // Lower temperature for more consistent, professional responses
+      maxTokens: 2000, // Increased token limit for more detailed responses
     });
 
     return result.toDataStreamResponse();
