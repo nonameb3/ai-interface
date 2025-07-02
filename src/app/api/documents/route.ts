@@ -28,6 +28,71 @@ const textSplitter = new RecursiveCharacterTextSplitter({
   separators: ['\n\n', '\n', ' ', ''],
 });
 
+// Content type detection and categorization
+function detectContentType(fileName: string, content: string): {
+  contentType: string;
+  category: string;
+  importance: string;
+  tags: string[];
+} {
+  const fileNameLower = fileName.toLowerCase();
+  const contentLower = content.toLowerCase();
+  
+  // Detect content type
+  let contentType = 'general';
+  if (fileNameLower.includes('skill') || contentLower.includes('technical skill') || contentLower.includes('programming')) {
+    contentType = 'skill';
+  } else if (fileNameLower.includes('project') || contentLower.includes('project') || contentLower.includes('built') || contentLower.includes('developed')) {
+    contentType = 'project';
+  } else if (fileNameLower.includes('experience') || fileNameLower.includes('work') || contentLower.includes('experience') || contentLower.includes('employed')) {
+    contentType = 'experience';
+  } else if (fileNameLower.includes('contact') || contentLower.includes('email') || contentLower.includes('linkedin')) {
+    contentType = 'contact';
+  } else if (fileNameLower.includes('education') || contentLower.includes('education') || contentLower.includes('degree') || contentLower.includes('university')) {
+    contentType = 'education';
+  }
+  
+  // Detect category
+  let category = 'general';
+  if (contentLower.includes('blockchain') || contentLower.includes('solidity') || contentLower.includes('ethereum') || contentLower.includes('smart contract')) {
+    category = 'blockchain';
+  } else if (contentLower.includes('react') || contentLower.includes('nextjs') || contentLower.includes('frontend') || contentLower.includes('ui')) {
+    category = 'frontend';
+  } else if (contentLower.includes('nodejs') || contentLower.includes('nestjs') || contentLower.includes('backend') || contentLower.includes('api')) {
+    category = 'backend';
+  } else if (contentLower.includes('ai') || contentLower.includes('llm') || contentLower.includes('machine learning') || contentLower.includes('langchain')) {
+    category = 'ai';
+  } else if (contentLower.includes('database') || contentLower.includes('postgresql') || contentLower.includes('mongodb')) {
+    category = 'database';
+  } else if (contentLower.includes('devops') || contentLower.includes('docker') || contentLower.includes('aws') || contentLower.includes('kafka')) {
+    category = 'devops';
+  }
+  
+  // Determine importance
+  let importance = 'medium';
+  if (contentLower.includes('senior') || contentLower.includes('lead') || contentLower.includes('expert') || contentLower.includes('primary')) {
+    importance = 'high';
+  } else if (contentLower.includes('basic') || contentLower.includes('familiar') || contentLower.includes('learning')) {
+    importance = 'low';
+  }
+  
+  // Extract tags
+  const tags: string[] = [];
+  const techKeywords = [
+    'typescript', 'solidity', 'react', 'nextjs', 'nodejs', 'nestjs', 'postgresql', 'mongodb',
+    'ethereum', 'blockchain', 'smart contracts', 'web3', 'ipfs', 'docker', 'aws', 'kafka',
+    'claude', 'chatgpt', 'langchain', 'pinecone', 'hardhat', 'truffle', 'zokrates'
+  ];
+  
+  techKeywords.forEach(keyword => {
+    if (contentLower.includes(keyword)) {
+      tags.push(keyword);
+    }
+  });
+  
+  return { contentType, category, importance, tags };
+}
+
 // POST - Upload and process document
 export async function POST(req: NextRequest) {
   try {
@@ -89,21 +154,47 @@ export async function POST(req: NextRequest) {
     const texts = documents.map(doc => doc.pageContent);
     const embeddingVectors = await embeddings.embedDocuments(texts);
 
-    // Prepare vectors for Pinecone with deterministic IDs
-    const vectors = documents.map((doc, i) => ({
-      id: `${source}-${file.name}-chunk-${i}`, // Deterministic ID based on source + filename + chunk
-      values: embeddingVectors[i],
-      metadata: {
-        content: doc.pageContent,
-        source: doc.metadata.source,
-        fileName: doc.metadata.fileName,
-        fileType: doc.metadata.fileType,
-        chunkIndex: i,
-        uploadedAt: doc.metadata.uploadedAt,
-      }
-    }));
+    // Prepare vectors for Pinecone with enhanced metadata
+    const vectors = documents.map((doc, i) => {
+      // Detect content type and categorization for each chunk
+      const classification = detectContentType(file.name, doc.pageContent);
+      
+      return {
+        id: `${source}-${file.name}-chunk-${i}`, // Deterministic ID based on source + filename + chunk
+        values: embeddingVectors[i],
+        metadata: {
+          // Original metadata
+          content: doc.pageContent,
+          source: doc.metadata.source,
+          fileName: doc.metadata.fileName,
+          fileType: doc.metadata.fileType,
+          chunkIndex: i,
+          uploadedAt: doc.metadata.uploadedAt,
+          
+          // Enhanced metadata for better organization
+          contentType: classification.contentType, // skill, project, experience, contact, education
+          category: classification.category,       // blockchain, frontend, backend, ai, database, devops
+          importance: classification.importance,   // high, medium, low
+          tags: classification.tags,              // array of technical keywords
+          
+          // Additional search helpers
+          searchText: doc.pageContent.toLowerCase().substring(0, 500), // First 500 chars for search
+          wordCount: doc.pageContent.split(' ').length,
+        }
+      };
+    });
 
-    console.log(`🔄 Processed ${vectors.length} vectors with optimized embeddings`);
+    console.log(`🔄 Processed ${vectors.length} vectors with optimized embeddings and enhanced metadata`);
+    
+    // Log classification summary
+    const classificationSummary = vectors.reduce((acc, vector) => {
+      const metadata = vector.metadata;
+      acc.contentTypes[metadata.contentType] = (acc.contentTypes[metadata.contentType] || 0) + 1;
+      acc.categories[metadata.category] = (acc.categories[metadata.category] || 0) + 1;
+      return acc;
+    }, { contentTypes: {} as Record<string, number>, categories: {} as Record<string, number> });
+    
+    console.log(`📊 Content Classification:`, classificationSummary);
 
     console.log(`📤 Uploading ${vectors.length} vectors to Pinecone...`);
     console.log(`📋 Using deterministic IDs - will UPDATE existing vectors if same file is uploaded again`);
@@ -148,21 +239,47 @@ export async function GET() {
       includeMetadata: true,
     });
 
-    // Extract unique sources
+    // Extract unique sources with enhanced metadata
     const documents = new Map();
+    const documentStats = new Map(); // Track stats per document
     
     queryResponse.matches?.forEach(match => {
       const metadata = match.metadata;
       if (metadata?.source && metadata?.fileName) {
         const key = `${metadata.source}-${metadata.fileName}`;
+        
         if (!documents.has(key)) {
           documents.set(key, {
             source: metadata.source,
             fileName: metadata.fileName,
             fileType: metadata.fileType,
             uploadedAt: metadata.uploadedAt,
+            contentType: metadata.contentType || 'general',
+            category: metadata.category || 'general',
+            importance: metadata.importance || 'medium',
+            tags: [],
+            chunkCount: 0,
+            totalWords: 0,
           });
+          documentStats.set(key, { tags: new Set(), chunkCount: 0, totalWords: 0 });
         }
+        
+        // Aggregate stats
+        const stats = documentStats.get(key)!;
+        const doc = documents.get(key)!;
+        
+        stats.chunkCount++;
+        if (metadata.tags && Array.isArray(metadata.tags)) {
+          metadata.tags.forEach((tag: string) => stats.tags.add(tag));
+        }
+        if (metadata.wordCount) {
+          stats.totalWords += metadata.wordCount;
+        }
+        
+        // Update document with aggregated data
+        doc.chunkCount = stats.chunkCount;
+        doc.totalWords = stats.totalWords;
+        doc.tags = Array.from(stats.tags);
       }
     });
 

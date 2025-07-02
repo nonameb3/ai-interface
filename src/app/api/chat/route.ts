@@ -60,6 +60,7 @@ ALWAYS ANSWER these portfolio-related questions:
 - How to contact {portfolioName}? (provide email, LinkedIn, GitHub)
 - What is {portfolioName}'s email/contact information?
 - Can you explain [portfolio topic] in more detail?
+- Show me {portfolioName}'s portfolio projects?
 - Tell me more about {portfolioName}'s [skills/experience/projects]
 - What technologies does {portfolioName} use?
 - Any question asking about {portfolioName}'s professional background

@@ -27,7 +27,7 @@ export default function PortfolioAssistant() {
   ];
 
   const chatSuggestions = [
-    "Can you explain that in more detail?",
+    `Show me ${portfolioName}'s portfolio projects?`,
     "What technologies were used?",
     `How to contract ${portfolioName}?`
   ];
