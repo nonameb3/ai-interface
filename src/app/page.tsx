@@ -21,7 +21,7 @@ export default function PortfolioAssistant() {
   // Smart suggestion questions
   const initialSuggestions = [
     `What are ${portfolioName}'s key technical skills?`,
-    `Tell me about recent projects`,
+    `Tell me about recent ${portfolioName}'s projects`,
     `What's ${portfolioName}'s professional background?`,
     `Show me their development experience`
   ];
