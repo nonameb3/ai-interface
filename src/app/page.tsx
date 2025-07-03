@@ -60,7 +60,7 @@ export default function PortfolioAssistant() {
         setTimeout(() => {
           if (chatContainerRef.current) {
             chatContainerRef.current.style.display = 'none';
-            chatContainerRef.current.offsetHeight; // Force reflow
+            void chatContainerRef.current.offsetHeight; // Force reflow
             chatContainerRef.current.style.display = '';
           }
         }, 50);
