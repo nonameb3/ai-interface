@@ -115,9 +115,14 @@ export default function PortfolioAssistant() {
         </div>
         <div className="flex items-center gap-3">
           <span className="text-sm font-medium text-gray-700">{portfolioName}</span>
-          <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
+          <a 
+            href="https://github.com/nonameb3" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center hover:bg-gray-300 transition-colors cursor-pointer"
+          >
             <Github className="w-4 h-4 text-black" />
-          </div>
+          </a>
         </div>
       </div>
 
