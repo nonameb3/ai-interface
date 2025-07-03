@@ -32,8 +32,12 @@ export default function PortfolioAssistant() {
     `How to contract ${portfolioName}?`
   ];
 
-  const { messages, input, handleInputChange, handleSubmit, append, status } = useChat({
+  const { messages, input, handleInputChange, handleSubmit, append, status, error } = useChat({
     api: "/api/chat",
+    onError: (error) => {
+      console.error("Chat error:", error);
+      // Force status to ready if there's an error to prevent stuck state
+    },
   });
 
   const scrollToBottom = () => {
@@ -48,7 +52,24 @@ export default function PortfolioAssistant() {
     }
   };
 
-  // Removed auto-scroll - users can control scrolling with the down arrow button
+  // Handle visibility changes to prevent UI issues when switching tabs
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        // Page is visible again, force re-render to fix blank screen issue
+        setTimeout(() => {
+          if (chatContainerRef.current) {
+            chatContainerRef.current.style.display = 'none';
+            chatContainerRef.current.offsetHeight; // Force reflow
+            chatContainerRef.current.style.display = '';
+          }
+        }, 50);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
 
   // Reset clicked badges when conversation starts fresh
   useEffect(() => {
@@ -190,15 +211,27 @@ export default function PortfolioAssistant() {
               ))}
 
               {/* Enhanced Streaming Indicator */}
-              {status === "submitted" && (
+              {(status === "submitted" || status === "streaming") && (
                 <div className="space-y-3">
                   <div className="text-gray-500 max-w-2xl">
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 bg-gray-400 rounded-full animate-pulse"></div>
                       <div className="flex items-center gap-1">
                         <span className="text-sm">🧠</span>
-                        <p className="text-sm">Searching knowledge base...</p>
+                        <p className="text-sm">{status === "submitted" ? "Searching knowledge base..." : "Generating response..."}</p>
                       </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Error Display */}
+              {error && (
+                <div className="space-y-3">
+                  <div className="text-red-500 max-w-2xl">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm">⚠️</span>
+                      <p className="text-sm">Sorry, something went wrong. Please try again.</p>
                     </div>
                   </div>
                 </div>
