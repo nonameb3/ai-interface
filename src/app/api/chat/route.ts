@@ -160,15 +160,22 @@ export async function POST(req: NextRequest) {
     ];
 
 
-    // Generate streaming response with enhanced settings
+    const isReasoningTierModel = (process.env.OPENAI_MODEL || '').startsWith('gpt-5.6');
+
     const result = await streamText({
       model: openai(process.env.OPENAI_MODEL || 'gpt-4-turbo-preview'),
       messages: messagesWithContext,
-      temperature: 0.3, // Lower temperature for more consistent, professional responses
-      maxTokens: 2000, // Increased token limit for more detailed responses
+      ...(isReasoningTierModel
+        ? { temperature: 1 }
+        : { temperature: 0.3, maxTokens: 2000 }),
     });
 
-    const response = result.toDataStreamResponse();
+    const response = result.toDataStreamResponse({
+      getErrorMessage: (error) => {
+        console.error('Stream error:', error);
+        return 'Sorry, something went wrong. Please try again.';
+      },
+    });
     
     // Add CORS headers to the response
     Object.entries(corsHeaders).forEach(([key, value]) => {
